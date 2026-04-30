@@ -12,7 +12,12 @@ if (fs.existsSync(envPath)) {
   content.split('\n').forEach(line => {
     const [key, ...value] = line.split('=');
     if (key && value) {
-      env[key.trim()] = value.join('=').trim();
+      let val = value.join('=').trim();
+      // Strip quotes if present
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.substring(1, val.length - 1);
+      }
+      env[key.trim()] = val;
     }
   });
 }

@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 
 const envFile = fs.readFileSync('.env.local', 'utf8');
-const VITE_SUPABASE_URL = envFile.match(/VITE_SUPABASE_URL=(.*)/)?.[1]?.trim();
-const SUPABASE_SERVICE_ROLE_KEY = envFile.match(/SUPABASE_SERVICE_ROLE_KEY=(.*)/)?.[1]?.trim();
+const VITE_SUPABASE_URL = envFile.match(/VITE_SUPABASE_URL=["']?(.*?)["']?$/m)?.[1]?.trim();
+const SUPABASE_SERVICE_ROLE_KEY = envFile.match(/SUPABASE_SERVICE_ROLE_KEY=["']?(.*?)["']?$/m)?.[1]?.trim();
 
 const supabaseUrl = VITE_SUPABASE_URL;
 const supabaseKey = SUPABASE_SERVICE_ROLE_KEY;

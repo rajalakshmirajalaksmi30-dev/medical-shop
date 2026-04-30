@@ -115,7 +115,7 @@ export default function CategoryPage() {
       {/* Promo Banners */}
       <div className="promo-banners">
         <div className="promo-card" style={{ background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)' }}>
-          <div style={{ position: 'relative', z-index: 2 }}>
+          <div style={{ position: 'relative', zIndex: 2 }}>
             <span className="discount-badge" style={{ marginBottom: '1rem', display: 'inline-block' }}>SPECIAL OFFER</span>
             <h3 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Save 20% on First Order</h3>
             <p style={{ opacity: 0.9, marginTop: '0.5rem' }}>Use Code: HEALTH20 at checkout</p>
@@ -123,7 +123,7 @@ export default function CategoryPage() {
           <Percent size={80} style={{ position: 'absolute', right: '-10px', bottom: '-10px', opacity: 0.1 }} />
         </div>
         <div className="promo-card" style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
-          <div style={{ position: 'relative', z-index: 2 }}>
+          <div style={{ position: 'relative', zIndex: 2 }}>
             <span className="discount-badge" style={{ marginBottom: '1rem', display: 'inline-block' }}>CARE CAMPAIGN</span>
             <h3 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Free Health Consultation</h3>
             <p style={{ opacity: 0.9, marginTop: '0.5rem' }}>Available with every order above ₹999</p>
