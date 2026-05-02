@@ -17,6 +17,7 @@ import Checkout from './pages/Checkout';
 import OrderSuccess from './pages/OrderSuccess';
 import OrderFailure from './pages/OrderFailure';
 import CategoryPage from './pages/CategoryPage';
+import MyOrders from './pages/MyOrders';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -54,6 +55,9 @@ function App() {
                 } />
                 <Route path="/order-failure" element={
                   <ProtectedRoute><OrderFailure /></ProtectedRoute>
+                } />
+                <Route path="/my-orders" element={
+                  <ProtectedRoute><MyOrders /></ProtectedRoute>
                 } />
 
                 {/* Admin Routes */}

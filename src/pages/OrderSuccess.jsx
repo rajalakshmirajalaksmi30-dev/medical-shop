@@ -31,7 +31,10 @@ export default function OrderSuccess() {
         )}
 
         <div className="order-result-actions">
-          <Link to="/" className="btn btn-primary btn-lg">
+          <Link to="/my-orders" className="btn btn-primary btn-lg">
+            <ShoppingBag size={18} /> Track My Orders
+          </Link>
+          <Link to="/" className="btn btn-secondary btn-lg">
             <Home size={18} /> Continue Shopping
           </Link>
         </div>

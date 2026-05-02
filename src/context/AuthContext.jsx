@@ -5,76 +5,81 @@ const AuthContext = createContext({});
 
 export const useAuth = () => useContext(AuthContext);
 
-// Helper: clear all Supabase auth data from localStorage
-function clearSupabaseSession() {
-  const keysToRemove = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && (key.includes('supabase') || key.includes('sb-'))) {
-      keysToRemove.push(key);
-    }
-  }
-  keysToRemove.forEach(key => localStorage.removeItem(key));
-  console.log('Cleared corrupted Supabase session from localStorage');
-}
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Build a profile from user_metadata (instant, no DB call needed for admin check)
+  const buildProfileFromMeta = (currentUser) => {
+    const meta = currentUser?.user_metadata;
+    if (meta) {
+      return {
+        id: currentUser.id,
+        full_name: meta.full_name || null,
+        phone: meta.phone || null,
+        user_role: meta.user_role || 'customer',
+      };
+    }
+    return null;
+  };
+
   const fetchProfile = async (userId, currentUser) => {
+    // Set profile from metadata immediately so admin access works instantly
+    const metaProfile = buildProfileFromMeta(currentUser);
+    if (metaProfile) {
+      setProfile(metaProfile);
+    }
+
+    // Then try to get the full profile from the DB (non-blocking enhancement)
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
-      if (error) throw error;
-      setProfile(data);
-    } catch (err) {
-      console.error('Error fetching profile:', err);
-      // Fallback: build profile from user_metadata so admin panel still works
-      const meta = currentUser?.user_metadata;
-      if (meta) {
-        setProfile({
-          id: userId,
-          full_name: meta.full_name || null,
-          phone: meta.phone || null,
-          user_role: meta.user_role || 'customer',
-        });
-      } else {
-        setProfile(null);
+      if (!error && data) {
+        setProfile(data);
       }
+    } catch (err) {
+      // Metadata fallback is already set, so this is fine
+      console.warn('Could not fetch DB profile, using metadata fallback:', err.message);
     }
   };
 
   useEffect(() => {
     let mounted = true;
 
-    async function initialize() {
-      // Safety timeout to prevent infinite loading
-      const fallbackTimer = setTimeout(() => {
-        if (mounted) {
-          console.warn('Auth initialization timed out, clearing stale session');
-          clearSupabaseSession();
+    // Safety timeout — if onAuthStateChange never fires, stop loading
+    const fallbackTimer = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('Auth: onAuthStateChange did not fire within 10s, assuming no session');
+        setLoading(false);
+      }
+    }, 10000);
+
+    // Use ONLY onAuthStateChange — do NOT also call getSession().
+    // Supabase v2 fires an INITIAL_SESSION event automatically.
+    // Calling both causes a navigator lock deadlock in the browser.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted) return;
+
+        console.log('Auth event:', event);
+
+        if (event === 'SIGNED_OUT') {
           setUser(null);
           setProfile(null);
           setLoading(false);
+          clearTimeout(fallbackTimer);
+          return;
         }
-      }, 4000);
 
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (!mounted) return;
-
-        // If getSession itself returned an error, clear the bad session
-        if (error) {
-          console.error('Session error, clearing:', error.message);
-          clearSupabaseSession();
+        if (event === 'TOKEN_REFRESHED' && !session) {
+          // Token refresh failed
           setUser(null);
           setProfile(null);
-          if (mounted) setLoading(false);
+          setLoading(false);
           clearTimeout(fallbackTimer);
           return;
         }
@@ -86,55 +91,17 @@ export function AuthProvider({ children }) {
           setUser(null);
           setProfile(null);
         }
-      } catch (err) {
-        console.error('Error during auth initialization:', err);
-        // On any error, clear potentially corrupted session
-        clearSupabaseSession();
-        setUser(null);
-        setProfile(null);
-      } finally {
-        clearTimeout(fallbackTimer);
-        if (mounted) setLoading(false);
-      }
-    }
 
-    initialize();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mounted) return;
-
-        // Handle token refresh failures — clear corrupted session
-        if (event === 'TOKEN_REFRESHED' && !session) {
-          console.warn('Token refresh failed, clearing session');
-          clearSupabaseSession();
-          setUser(null);
-          setProfile(null);
-          if (mounted) setLoading(false);
-          return;
+        if (mounted) {
+          setLoading(false);
+          clearTimeout(fallbackTimer);
         }
-
-        if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setProfile(null);
-          if (mounted) setLoading(false);
-          return;
-        }
-
-        if (session?.user) {
-          setUser(session.user);
-          await fetchProfile(session.user.id, session.user);
-        } else {
-          setUser(null);
-          setProfile(null);
-        }
-        
-        if (mounted) setLoading(false);
       }
     );
 
     return () => {
       mounted = false;
+      clearTimeout(fallbackTimer);
       subscription.unsubscribe();
     };
   }, []);
@@ -161,17 +128,14 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    // Clear state locally immediately so the UI updates
     setUser(null);
     setProfile(null);
 
-    // Clear any stored session data
-    clearSupabaseSession();
-
-    // Call signOut but don't await — prevents hanging
-    supabase.auth.signOut({ scope: 'local' }).catch(err => {
-      console.error('AuthContext: signOut error', err);
-    });
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
   };
 
   const isAdmin = profile?.user_role === 'admin' || user?.user_metadata?.user_role === 'admin';
@@ -192,3 +156,4 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
+

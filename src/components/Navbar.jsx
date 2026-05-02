@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { ShoppingCart, Menu, X, User, LogOut, LayoutDashboard, Home, Info, Heart } from 'lucide-react';
+import { ShoppingCart, Menu, X, User, LogOut, LayoutDashboard, Home, Info, Heart, ClipboardList } from 'lucide-react';
 import '../styles/navbar.css';
 
 export default function Navbar() {
@@ -56,6 +56,10 @@ export default function Navbar() {
           
           {dropdownOpen && (
             <div className="navbar-dropdown">
+              <Link to="/my-orders" className="dropdown-item" onClick={() => { setDropdownOpen(false); setMobileOpen(false); }}>
+                <ClipboardList size={16} />
+                My Orders
+              </Link>
               {isAdmin && (
                 <Link to="/admin" className="dropdown-item" onClick={() => { setDropdownOpen(false); setMobileOpen(false); }}>
                   <LayoutDashboard size={16} />
