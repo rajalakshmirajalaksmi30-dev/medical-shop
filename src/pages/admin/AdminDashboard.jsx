@@ -61,7 +61,7 @@ export default function AdminDashboard() {
           <Link to="/admin/orders" className={`admin-sidebar-link ${isActive('/admin/orders')}`}>
             <ShoppingCart size={20} /> Orders
           </Link>
-          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
             <Link to="/" className="admin-sidebar-link">
               <Home size={20} /> Back to Store
             </Link>
