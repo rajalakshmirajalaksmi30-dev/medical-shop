@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, BarChart3, Home } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, BarChart3, Home, Ticket } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import '../../styles/admin.css';
 
 export default function AdminDashboard() {
   const location = useLocation();
-  const [stats, setStats] = useState({ products: 0, orders: 0, revenue: 0, pending: 0 });
+  const [stats, setStats] = useState({ products: 0, orders: 0, revenue: 0, pending: 0, coupons: 0 });
   const [loading, setLoading] = useState(true);
 
   const isActive = (path) => {
@@ -21,9 +21,10 @@ export default function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      const [productsRes, ordersRes] = await Promise.all([
+      const [productsRes, ordersRes, couponsRes] = await Promise.all([
         supabase.from('products').select('id', { count: 'exact' }),
         supabase.from('orders').select('*'),
+        supabase.from('coupons').select('id', { count: 'exact' }).eq('status', true),
       ]);
 
       const orders = ordersRes.data || [];
@@ -37,6 +38,7 @@ export default function AdminDashboard() {
         orders: orders.length,
         revenue,
         pending,
+        coupons: couponsRes.count || 0,
       });
     } catch (err) {
       console.error('Error fetching stats:', err);
@@ -60,6 +62,9 @@ export default function AdminDashboard() {
           </Link>
           <Link to="/admin/orders" className={`admin-sidebar-link ${isActive('/admin/orders')}`}>
             <ShoppingCart size={20} /> Orders
+          </Link>
+          <Link to="/admin/coupons" className={`admin-sidebar-link ${isActive('/admin/coupons')}`}>
+            <Ticket size={20} /> Coupons
           </Link>
           <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
             <Link to="/" className="admin-sidebar-link">
@@ -119,7 +124,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.25rem' }}>
               <Link to="/admin/products" className="card" style={{ padding: '2rem', textAlign: 'center', textDecoration: 'none' }}>
                 <Package size={36} style={{ color: 'var(--primary-400)', marginBottom: '1rem' }} />
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem' }}>Manage Products</h3>
@@ -129,6 +134,11 @@ export default function AdminDashboard() {
                 <ShoppingCart size={36} style={{ color: 'var(--accent-400)', marginBottom: '1rem' }} />
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem' }}>View Orders</h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Track and manage customer orders</p>
+              </Link>
+              <Link to="/admin/coupons" className="card" style={{ padding: '2rem', textAlign: 'center', textDecoration: 'none' }}>
+                <Ticket size={36} style={{ color: '#f59e0b', marginBottom: '1rem' }} />
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem' }}>Manage Coupons</h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Create and manage discount coupons</p>
               </Link>
             </div>
           </>

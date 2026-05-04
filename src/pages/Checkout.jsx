@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, CreditCard, Shield } from 'lucide-react';
+import { MapPin, CreditCard, Shield, Ticket } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import '../styles/checkout.css';
+import '../styles/coupons.css';
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { cart, cartTotal, clearCart } = useCart();
+  const { cart, cartTotal, clearCart, appliedCoupon, discount, finalTotal } = useCart();
   const { user } = useAuth();
 
   const [address, setAddress] = useState({
@@ -69,8 +70,10 @@ export default function Checkout() {
         throw new Error('Failed to load payment gateway. Please check your internet connection.');
       }
 
-      // Create order via API
-      const amountInPaise = Math.round(cartTotal * 100);
+      // Use finalTotal (after discount) for payment
+      const paymentAmount = finalTotal;
+      const amountInPaise = Math.round(paymentAmount * 100);
+
       const response = await fetch('/api/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -89,7 +92,7 @@ export default function Checkout() {
         amount: orderData.amount,
         currency: orderData.currency || 'INR',
         name: 'Shantha Krish Medicals',
-        description: `Order of ${cart.length} items`,
+        description: `Order of ${cart.length} items${appliedCoupon ? ` (Coupon: ${appliedCoupon.code})` : ''}`,
         order_id: orderData.id,
         handler: async function (response) {
           try {
@@ -107,7 +110,7 @@ export default function Checkout() {
             const verifyData = await verifyRes.json();
 
             if (verifyData.verified) {
-              // Save order to Supabase
+              // Save order to Supabase (with coupon info)
               const { data: order, error: orderError } = await supabase
                 .from('orders')
                 .insert({
@@ -118,16 +121,37 @@ export default function Checkout() {
                     price: item.price,
                     quantity: item.quantity,
                   })),
-                  total_amount: cartTotal,
+                  total_amount: paymentAmount,
                   payment_status: 'paid',
                   razorpay_order_id: response.razorpay_order_id,
                   razorpay_payment_id: response.razorpay_payment_id,
                   shipping_address: address,
+                  coupon_code: appliedCoupon?.code || null,
+                  discount_amount: discount || 0,
                 })
                 .select()
                 .single();
 
               if (orderError) throw orderError;
+
+              // Record coupon usage and increment used_count
+              if (appliedCoupon && supabase) {
+                try {
+                  await supabase.from('coupon_usage').insert({
+                    coupon_id: appliedCoupon.id,
+                    user_id: user.id,
+                    order_id: order.id,
+                  });
+
+                  await supabase
+                    .from('coupons')
+                    .update({ used_count: (appliedCoupon.used_count || 0) + 1 })
+                    .eq('id', appliedCoupon.id);
+                } catch (couponErr) {
+                  console.error('Coupon usage tracking error:', couponErr);
+                  // Don't fail the order for this
+                }
+              }
 
               clearCart();
               navigate('/order-success', {
@@ -288,13 +312,23 @@ export default function Checkout() {
                 <span>Subtotal</span>
                 <span>₹{cartTotal.toFixed(2)}</span>
               </div>
+
+              {discount > 0 && (
+                <div className="checkout-total-row" style={{ color: 'var(--success)' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Ticket size={14} /> Coupon ({appliedCoupon?.code})
+                  </span>
+                  <span>-₹{discount.toFixed(2)}</span>
+                </div>
+              )}
+
               <div className="checkout-total-row">
                 <span>Delivery</span>
                 <span style={{ color: 'var(--success)' }}>Free</span>
               </div>
               <div className="checkout-total-final">
                 <span>Total</span>
-                <span>₹{cartTotal.toFixed(2)}</span>
+                <span>₹{finalTotal.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -306,7 +340,7 @@ export default function Checkout() {
             id="pay-now-btn"
           >
             <CreditCard size={20} />
-            {loading ? 'Processing...' : `Pay ₹${cartTotal.toFixed(2)}`}
+            {loading ? 'Processing...' : `Pay ₹${finalTotal.toFixed(2)}`}
           </button>
 
           <div className="checkout-secure-note">

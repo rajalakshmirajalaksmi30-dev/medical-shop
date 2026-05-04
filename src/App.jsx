@@ -25,6 +25,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminProductForm from './pages/admin/AdminProductForm';
 import AdminOrders from './pages/admin/AdminOrders';
+import AdminCoupons from './pages/admin/AdminCoupons';
 
 import './styles/index.css';
 import './styles/admin.css';
@@ -70,6 +71,7 @@ function App() {
                   <Route path="products/new" element={<AdminProductForm />} />
                   <Route path="products/edit/:id" element={<AdminProductForm />} />
                   <Route path="orders" element={<AdminOrders />} />
+                  <Route path="coupons" element={<AdminCoupons />} />
                 </Route>
               </Routes>
             </main>
