@@ -1,22 +1,25 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, ChevronDown, ChevronUp, MapPin, CreditCard, Clock, CheckCircle, XCircle, Truck, ShoppingBag } from 'lucide-react';
+import { Package, Eye, Clock, CheckCircle, XCircle, Truck, ShoppingBag, ArrowRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
-import '../styles/my-orders.css';
+import '../styles/myorders.css';
 
 export default function MyOrders() {
   const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedOrder, setExpandedOrder] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    if (user) fetchOrders();
+    if (user) {
+      fetchMyOrders();
+    }
   }, [user]);
 
-  const fetchOrders = async () => {
+  const fetchMyOrders = async () => {
     try {
       const { data, error } = await supabase
         .from('orders')
@@ -33,242 +36,204 @@ export default function MyOrders() {
     }
   };
 
-  const getStatusConfig = (status) => {
-    const configs = {
-      paid: {
-        label: 'Confirmed',
-        icon: CheckCircle,
-        className: 'status-confirmed',
-        description: 'Your order has been confirmed and is being prepared.',
-      },
-      pending: {
-        label: 'Pending',
-        icon: Clock,
-        className: 'status-pending',
-        description: 'Your order is pending payment confirmation.',
-      },
-      processing: {
-        label: 'Processing',
-        icon: Package,
-        className: 'status-processing',
-        description: 'Your order is being prepared for shipment.',
-      },
-      shipped: {
-        label: 'Shipped',
-        icon: Truck,
-        className: 'status-shipped',
-        description: 'Your order is on its way!',
-      },
-      delivered: {
-        label: 'Delivered',
-        icon: CheckCircle,
-        className: 'status-delivered',
-        description: 'Your order has been delivered.',
-      },
-      failed: {
-        label: 'Failed',
-        icon: XCircle,
-        className: 'status-failed',
-        description: 'Payment failed. Please try again.',
-      },
-      cancelled: {
-        label: 'Cancelled',
-        icon: XCircle,
-        className: 'status-cancelled',
-        description: 'This order has been cancelled.',
-      },
-    };
-    return configs[status] || configs.pending;
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'paid': return <CheckCircle size={16} />;
+      case 'shipped': return <Truck size={16} />;
+      case 'delivered': return <CheckCircle size={16} />;
+      case 'pending': return <Clock size={16} />;
+      case 'failed': return <XCircle size={16} />;
+      default: return <Package size={16} />;
+    }
   };
 
-  const getProgressSteps = (status) => {
-    const steps = ['confirmed', 'processing', 'shipped', 'delivered'];
-    const statusMap = { paid: 'confirmed', pending: 'pending' };
-    const current = statusMap[status] || status;
-    const currentIndex = steps.indexOf(current);
-    return steps.map((step, index) => ({
-      label: step.charAt(0).toUpperCase() + step.slice(1),
-      completed: index <= currentIndex,
-      active: index === currentIndex,
-    }));
+  const getStatusClass = (order) => {
+    const status = order.status || order.payment_status;
+    switch (status) {
+      case 'paid': return 'status-paid';
+      case 'shipped': return 'status-shipped';
+      case 'delivered': return 'status-delivered';
+      case 'pending': return 'status-pending';
+      case 'failed': return 'status-failed';
+      default: return 'status-pending';
+    }
   };
 
-  const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const getDisplayStatus = (order) => {
+    return order.status || order.payment_status || 'pending';
   };
+
+  const filteredOrders = orders.filter(o => {
+    if (filter === 'all') return true;
+    const status = o.status || o.payment_status;
+    return status === filter;
+  });
 
   if (loading) return <LoadingSpinner text="Loading your orders..." />;
 
-  return (
-    <div className="page container my-orders-page" id="my-orders-page">
-      <div className="page-header">
-        <h1 className="page-title">My Orders</h1>
-        <p className="page-subtitle">
-          {orders.length > 0
-            ? `You have ${orders.length} order${orders.length > 1 ? 's' : ''}`
-            : 'Track your order status here'}
-        </p>
-      </div>
-
-      {orders.length === 0 ? (
-        <div className="orders-empty">
-          <div className="orders-empty-icon">
-            <ShoppingBag size={64} />
-          </div>
-          <h2 className="orders-empty-title">No orders yet</h2>
-          <p className="orders-empty-text">
-            When you place an order, it will appear here so you can track its status.
-          </p>
+  if (orders.length === 0) {
+    return (
+      <div className="page container myorders-page" id="myorders-page">
+        <div className="myorders-empty">
+          <ShoppingBag size={64} className="myorders-empty-icon" />
+          <h2 className="myorders-empty-title">No orders yet</h2>
+          <p className="myorders-empty-text">You haven't placed any orders yet. Start shopping to see your orders here.</p>
           <Link to="/" className="btn btn-primary btn-lg">
-            Start Shopping
+            Start Shopping <ArrowRight size={18} />
           </Link>
         </div>
-      ) : (
-        <div className="orders-list">
-          {orders.map((order) => {
-            const statusConfig = getStatusConfig(order.payment_status);
-            const StatusIcon = statusConfig.icon;
-            const isExpanded = expandedOrder === order.id;
-            const progress = getProgressSteps(order.payment_status);
+      </div>
+    );
+  }
 
-            return (
-              <div
-                key={order.id}
-                className={`order-card ${isExpanded ? 'expanded' : ''}`}
-                id={`order-${order.id.substring(0, 8)}`}
-              >
-                {/* Order Header */}
-                <div
-                  className="order-card-header"
-                  onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
+  return (
+    <div className="page container myorders-page" id="myorders-page">
+      <div className="myorders-header">
+        <div>
+          <h1 className="page-title">My Orders</h1>
+          <p className="page-subtitle">{orders.length} order{orders.length !== 1 ? 's' : ''} placed</p>
+        </div>
+        <div className="myorders-filters">
+          {['all', 'pending', 'paid', 'shipped', 'delivered', 'failed'].map(f => (
+            <button
+              key={f}
+              className={`myorders-filter-chip ${filter === f ? 'active' : ''}`}
+              onClick={() => setFilter(f)}
+            >
+              {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="myorders-list">
+        {filteredOrders.map((order, i) => (
+          <div
+            key={order.id}
+            className="myorder-card animate-fade-in-up"
+            style={{ animationDelay: `${i * 0.05}s`, opacity: 0 }}
+          >
+            <div className="myorder-card-header">
+              <div className="myorder-card-id">
+                <Package size={18} />
+                <span>Order #{order.id.substring(0, 8).toUpperCase()}</span>
+              </div>
+              <span className={`myorder-status ${getStatusClass(order)}`}>
+                {getStatusIcon(order)}
+                {getDisplayStatus(order)}
+              </span>
+            </div>
+
+            <div className="myorder-card-body">
+              <div className="myorder-items">
+                {(order.items || []).map((item, idx) => (
+                  <div key={idx} className="myorder-item">
+                    <div className="myorder-item-info">
+                      <span className="myorder-item-name">{item.name}</span>
+                      <span className="myorder-item-qty">× {item.quantity}</span>
+                    </div>
+                    <span className="myorder-item-price">₹{(item.price * item.quantity).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="myorder-card-footer">
+                <div className="myorder-meta">
+                  <span className="myorder-date">
+                    <Clock size={14} />
+                    {new Date(order.created_at).toLocaleDateString('en-IN', {
+                      day: 'numeric', month: 'short', year: 'numeric'
+                    })}
+                  </span>
+                  <span className="myorder-total">Total: <strong>₹{Number(order.total_amount).toFixed(2)}</strong></span>
+                </div>
+                <button
+                  className="btn btn-sm btn-secondary"
+                  onClick={() => setSelectedOrder(order)}
                 >
-                  <div className="order-card-left">
-                    <div className="order-id-row">
-                      <span className="order-id-label">Order</span>
-                      <span className="order-id-value">
-                        #{order.id.substring(0, 8).toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="order-date">{formatDate(order.created_at)}</div>
-                  </div>
+                  <Eye size={16} /> View Details
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
 
-                  <div className="order-card-center">
-                    <div className={`order-status-badge ${statusConfig.className}`}>
-                      <StatusIcon size={14} />
-                      {statusConfig.label}
-                    </div>
-                  </div>
+      {/* Order Detail Modal */}
+      {selectedOrder && (
+        <div className="myorder-modal-overlay" onClick={() => setSelectedOrder(null)}>
+          <div className="myorder-modal" onClick={e => e.stopPropagation()}>
+            <div className="myorder-modal-header">
+              <h3>Order Details</h3>
+              <button className="myorder-modal-close" onClick={() => setSelectedOrder(null)}>×</button>
+            </div>
 
-                  <div className="order-card-right">
-                    <div className="order-total">₹{Number(order.total_amount).toFixed(2)}</div>
-                    <div className="order-item-count">
-                      {(order.items || []).length} item{(order.items || []).length !== 1 ? 's' : ''}
-                    </div>
-                    <button className="order-expand-btn" aria-label="Toggle details">
-                      {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                    </button>
+            <div className="myorder-modal-body">
+              <div className="myorder-detail-grid">
+                <div className="myorder-detail-item">
+                  <div className="myorder-detail-label">Order ID</div>
+                  <div className="myorder-detail-value" style={{ fontFamily: 'monospace' }}>
+                    {selectedOrder.id.substring(0, 8).toUpperCase()}
                   </div>
                 </div>
-
-                {/* Expanded Details */}
-                {isExpanded && (
-                  <div className="order-card-body">
-                    {/* Status Description */}
-                    <div className="order-status-info">
-                      <StatusIcon size={18} />
-                      <span>{statusConfig.description}</span>
-                    </div>
-
-                    {/* Progress Tracker (only for non-failed/cancelled orders) */}
-                    {order.payment_status !== 'failed' && order.payment_status !== 'cancelled' && (
-                      <div className="order-progress">
-                        {progress.map((step, idx) => (
-                          <div
-                            key={step.label}
-                            className={`progress-step ${step.completed ? 'completed' : ''} ${step.active ? 'active' : ''}`}
-                          >
-                            <div className="progress-dot">
-                              {step.completed && <CheckCircle size={14} />}
-                            </div>
-                            {idx < progress.length - 1 && <div className="progress-line" />}
-                            <span className="progress-label">{step.label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Items */}
-                    <div className="order-items-section">
-                      <h4 className="order-section-title">
-                        <Package size={16} /> Items Ordered
-                      </h4>
-                      <div className="order-items-list">
-                        {(order.items || []).map((item, i) => (
-                          <div key={i} className="order-item-row">
-                            <div className="order-item-info">
-                              <span className="order-item-name">{item.name}</span>
-                              <span className="order-item-qty">× {item.quantity}</span>
-                            </div>
-                            <span className="order-item-price">
-                              ₹{(item.price * item.quantity).toFixed(2)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="order-items-total">
-                        <span>Total</span>
-                        <span>₹{Number(order.total_amount).toFixed(2)}</span>
-                      </div>
-                    </div>
-
-                    {/* Shipping Address */}
-                    {order.shipping_address && (
-                      <div className="order-address-section">
-                        <h4 className="order-section-title">
-                          <MapPin size={16} /> Delivery Address
-                        </h4>
-                        <div className="order-address-card">
-                          <div className="order-address-name">
-                            {order.shipping_address.name}
-                          </div>
-                          <div className="order-address-line">
-                            {order.shipping_address.street}
-                          </div>
-                          <div className="order-address-line">
-                            {order.shipping_address.city}, {order.shipping_address.state} -{' '}
-                            {order.shipping_address.pincode}
-                          </div>
-                          {order.shipping_address.phone && (
-                            <div className="order-address-phone">
-                              📞 {order.shipping_address.phone}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Payment Info */}
-                    {order.razorpay_payment_id && (
-                      <div className="order-payment-section">
-                        <h4 className="order-section-title">
-                          <CreditCard size={16} /> Payment Details
-                        </h4>
-                        <div className="order-payment-id">
-                          Payment ID: {order.razorpay_payment_id}
-                        </div>
-                      </div>
-                    )}
+                <div className="myorder-detail-item">
+                  <div className="myorder-detail-label">Status</div>
+                  <span className={`myorder-status ${getStatusClass(selectedOrder)}`}>
+                    {getStatusIcon(selectedOrder)}
+                    {getDisplayStatus(selectedOrder)}
+                  </span>
+                </div>
+                <div className="myorder-detail-item">
+                  <div className="myorder-detail-label">Total Amount</div>
+                  <div className="myorder-detail-value" style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+                    ₹{Number(selectedOrder.total_amount).toFixed(2)}
                   </div>
-                )}
+                </div>
+                <div className="myorder-detail-item">
+                  <div className="myorder-detail-label">Date</div>
+                  <div className="myorder-detail-value">
+                    {new Date(selectedOrder.created_at).toLocaleString('en-IN')}
+                  </div>
+                </div>
               </div>
-            );
-          })}
+
+              {selectedOrder.razorpay_payment_id && (
+                <div className="myorder-payment-info">
+                  <div className="myorder-detail-label">Payment ID</div>
+                  <div style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                    {selectedOrder.razorpay_payment_id}
+                  </div>
+                </div>
+              )}
+
+              <div className="myorder-items-detail">
+                <div className="myorder-detail-label" style={{ marginBottom: '0.5rem' }}>Items</div>
+                {(selectedOrder.items || []).map((item, i) => (
+                  <div key={i} className="myorder-item-detail-row">
+                    <span>{item.name} × {item.quantity}</span>
+                    <span style={{ fontWeight: 600 }}>₹{(item.price * item.quantity).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+
+              {selectedOrder.shipping_address && (
+                <div className="myorder-shipping-info">
+                  <div className="myorder-detail-label" style={{ marginBottom: '0.25rem' }}>Shipping Address</div>
+                  <div style={{ fontSize: '0.85rem', lineHeight: 1.5 }}>
+                    {selectedOrder.shipping_address.name}<br />
+                    {selectedOrder.shipping_address.street}<br />
+                    {selectedOrder.shipping_address.city}, {selectedOrder.shipping_address.state} - {selectedOrder.shipping_address.pincode}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="myorder-modal-footer">
+              <button className="btn btn-secondary" onClick={() => setSelectedOrder(null)}>
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

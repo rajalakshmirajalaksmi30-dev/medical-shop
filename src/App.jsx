@@ -17,6 +17,7 @@ import Checkout from './pages/Checkout';
 import OrderSuccess from './pages/OrderSuccess';
 import OrderFailure from './pages/OrderFailure';
 import CategoryPage from './pages/CategoryPage';
+import Categories from './pages/Categories';
 import MyOrders from './pages/MyOrders';
 
 // Admin Pages
@@ -42,6 +43,7 @@ function App() {
                 <Route path="/about" element={<About />} />
                 <Route path="/product/:id" element={<ProductDetail />} />
                 <Route path="/cart" element={<Cart />} />
+                <Route path="/categories" element={<Categories />} />
                 <Route path="/category/:categoryName" element={<CategoryPage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
@@ -53,11 +55,11 @@ function App() {
                 <Route path="/order-success" element={
                   <ProtectedRoute><OrderSuccess /></ProtectedRoute>
                 } />
-                <Route path="/order-failure" element={
-                  <ProtectedRoute><OrderFailure /></ProtectedRoute>
-                } />
                 <Route path="/my-orders" element={
                   <ProtectedRoute><MyOrders /></ProtectedRoute>
+                } />
+                <Route path="/order-failure" element={
+                  <ProtectedRoute><OrderFailure /></ProtectedRoute>
                 } />
 
                 {/* Admin Routes */}

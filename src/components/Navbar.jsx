@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { ShoppingCart, Menu, X, User, LogOut, LayoutDashboard, Home, Info, Heart, ClipboardList } from 'lucide-react';
+import { ShoppingCart, Menu, X, User, LogOut, LayoutDashboard, Home, Info, Heart, Grid2X2, ClipboardList } from 'lucide-react';
 import '../styles/navbar.css';
 
 export default function Navbar() {
@@ -31,9 +31,17 @@ export default function Navbar() {
         <Home size={18} />
         Home
       </Link>
-      <Link to="/about" className={`navbar-link navbar-link-highlight ${isActive('/about')}`} onClick={() => setMobileOpen(false)}>
+      <Link to="/about" className={`navbar-link ${isActive('/about')}`} onClick={() => setMobileOpen(false)}>
         <Info size={18} />
         About
+      </Link>
+      <Link to="/categories" className={`navbar-link ${isActive('/categories')}`} onClick={() => setMobileOpen(false)}>
+        <Grid2X2 size={18} />
+        Categories
+      </Link>
+      <Link to="/my-orders" className={`navbar-link ${isActive('/my-orders')}`} onClick={() => setMobileOpen(false)}>
+        <ClipboardList size={18} />
+        My Orders
       </Link>
       <Link to="/cart" className={`navbar-link ${isActive('/cart')}`} onClick={() => setMobileOpen(false)} style={{ position: 'relative' }}>
         <ShoppingCart size={18} />

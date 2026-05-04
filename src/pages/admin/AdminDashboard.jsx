@@ -28,9 +28,9 @@ export default function AdminDashboard() {
 
       const orders = ordersRes.data || [];
       const revenue = orders
-        .filter(o => o.payment_status === 'paid')
+        .filter(o => o.payment_status === 'paid' || o.status === 'shipped' || o.status === 'delivered')
         .reduce((sum, o) => sum + Number(o.total_amount), 0);
-      const pending = orders.filter(o => o.payment_status === 'pending').length;
+      const pending = orders.filter(o => o.status === 'pending' || o.payment_status === 'pending').length;
 
       setStats({
         products: productsRes.count || 0,

@@ -213,15 +213,16 @@ ul, ol {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary-600), var(--primary-500));
-  color: var(--text-primary);
-  box-shadow: var(--shadow-md), var(--shadow-glow);
+  background: linear-gradient(135deg, #4da6ff, #0080ff);
+  color: #ffffff;
+  box-shadow: var(--shadow-md), 0 4px 15px rgba(0, 128, 255, 0.3);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, var(--primary-500), var(--primary-400));
+  background: linear-gradient(135deg, #1a8cff, #0066cc);
+  color: #ffffff;
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lg), 0 0 30px rgba(20, 184, 166, 0.4);
+  box-shadow: var(--shadow-lg), 0 6px 20px rgba(0, 128, 255, 0.4);
 }
 
 .btn-secondary {
